@@ -1,0 +1,475 @@
+================================================================================
+  BEGINNER'S GUIDE: MAKING PLOTS IN PYTHON FROM CELLPROFILER DATA
+================================================================================
+
+This guide teaches you how to go from raw CellProfiler CSV files to
+publication-quality plots — step by step, with no prior experience needed.
+
+
+--------------------------------------------------------------------------------
+  WHAT YOU WILL LEARN
+--------------------------------------------------------------------------------
+
+  Step 0  - The big picture
+  Step 1  - What the tools (libraries) are
+  Step 2  - How to open and read a CSV file
+  Step 3  - How to look at your data
+  Step 4  - How to select columns
+  Step 5  - How to group and merge data
+  Step 6  - Bar chart
+  Step 7  - Violin plot
+  Step 8  - Box plot
+  Step 9  - Histogram
+  Step 10 - Scatter plot
+  Step 11 - Saving your plots
+  Step 12 - Changing colours and styles
+  Step 13 - Customising titles and labels
+  Step 14 - Quick reference table
+  Step 15 - Common mistakes and how to fix them
+  Step 16 - Your workflow summary
+
+
+================================================================================
+  STEP 0 — THE BIG PICTURE
+================================================================================
+
+When you write a Python plotting script you always follow the same recipe:
+
+  1. Import libraries   (get your tools out of the toolbox)
+  2. Load data          (open the CSV file)
+  3. Inspect data       (look at what's in it)
+  4. Prepare data       (clean, filter, group)
+  5. Make a plot        (draw!)
+  6. Save or show       (export the image)
+
+Every plot in make_plots.py follows exactly this order.
+
+
+================================================================================
+  STEP 1 — THE LIBRARIES (TOOLS)
+================================================================================
+
+Python itself can't make plots or read CSV files. You need to import extra
+"libraries" — collections of useful code written by other people.
+
+  import pandas as pd              # reads tables/CSV files. "pd" is a nickname.
+  import matplotlib.pyplot as plt  # the core drawing engine. "plt" is a nickname.
+  import seaborn as sns            # makes prettier plots with less code.
+  import numpy as np               # maths and numbers. "np" is a nickname.
+  import os                        # helps you build file paths.
+
+  Analogy: Libraries are like apps on your phone.
+           You don't build them yourself — you just install and use them.
+
+To install them (you only need to do this ONCE):
+
+  Open a terminal/command prompt and type:
+      pip install pandas matplotlib seaborn numpy
+
+
+================================================================================
+  STEP 2 — LOADING A CSV FILE
+================================================================================
+
+A CSV file is just a table saved as plain text.
+Pandas can read it into a "DataFrame" — think of it as an Excel sheet in Python.
+
+  import pandas as pd
+
+  # Read the file into a variable called "nuc"
+  nuc = pd.read_csv("MyExpt_Nuclei.csv")
+
+  # nuc is now a DataFrame: a table with rows and columns.
+
+  TIP: The path "MyExpt_Nuclei.csv" works when your script is in the SAME
+       FOLDER as the CSV file. Otherwise write the full path, for example:
+       nuc = pd.read_csv(r"C:\Users\thoma\...\MyExpt_Nuclei.csv")
+
+
+================================================================================
+  STEP 3 — INSPECTING YOUR DATA
+================================================================================
+
+Before plotting, always look at your data first!
+
+  # How many rows and columns?
+  print(nuc.shape)              # e.g. (848, 453)  ->  848 nuclei, 453 columns
+
+  # What are the column names?
+  print(nuc.columns.tolist())   # prints a list of all column names
+
+  # Show the first 5 rows (like viewing the top of an Excel sheet)
+  print(nuc.head())
+
+  # Show basic statistics (min, max, mean) for every numeric column
+  print(nuc.describe())
+
+
+================================================================================
+  STEP 4 — SELECTING COLUMNS
+================================================================================
+
+A DataFrame column is selected with square brackets,
+like looking up a cell in Excel:
+
+  # Select ONE column  ->  returns a list of values (called a "Series")
+  areas = nuc["AreaShape_Area"]
+
+  # Select MULTIPLE columns  ->  returns a smaller DataFrame
+  subset = nuc[["AreaShape_Area", "AreaShape_Eccentricity"]]
+
+  TIP: The column name must match EXACTLY (including capital letters).
+       Use print(nuc.columns.tolist()) to see the exact names.
+
+
+================================================================================
+  STEP 5 — GROUPING AND MERGING DATA
+================================================================================
+
+Most plots group cells by Well. This works like a pivot table in Excel.
+
+  -- MERGING (connecting two tables, like VLOOKUP in Excel) --
+
+  img = pd.read_csv("MyExpt_Image.csv")
+  well_lookup = img[["ImageNumber", "Metadata_Well"]]   # small helper table
+  nuc = nuc.merge(well_lookup, on="ImageNumber", how="left")
+
+  Now nuc has a "Metadata_Well" column for each nucleus.
+
+  -- GROUPING (computing a value per group) --
+
+  # Mean area per well:
+  mean_area = nuc.groupby("Metadata_Well")["AreaShape_Area"].mean()
+
+  # Mean AND standard deviation per well:
+  stats = nuc.groupby("Metadata_Well")["AreaShape_Area"].agg(["mean", "std"])
+
+
+================================================================================
+  STEP 6 — BAR CHART
+================================================================================
+
+A bar chart shows ONE summary value (e.g. mean) per group.
+
+  import matplotlib.pyplot as plt
+
+  # 1. Calculate what to plot
+  mean_area = nuc.groupby("Metadata_Well")["AreaShape_Area"].mean()
+
+  # 2. Create a figure and axes (the "canvas" and "drawing area")
+  fig, ax = plt.subplots(figsize=(7, 5))   # width=7 inches, height=5 inches
+
+  # 3. Draw the bars
+  ax.bar(mean_area.index,    # x-axis: well names (A14, B13 ...)
+         mean_area.values)   # y-axis: the mean area values
+
+  # 4. Add labels
+  ax.set_title("Mean Nuclei Area per Well")
+  ax.set_xlabel("Well")
+  ax.set_ylabel("Mean area (pixels squared)")
+
+  # 5. Save
+  plt.tight_layout()
+  plt.savefig("my_barchart.png", dpi=150)
+
+
+  -- ADDING ERROR BARS (standard deviation) --
+
+  mean_area = nuc.groupby("Metadata_Well")["AreaShape_Area"].mean()
+  std_area  = nuc.groupby("Metadata_Well")["AreaShape_Area"].std()
+
+  fig, ax = plt.subplots(figsize=(7, 5))
+  ax.bar(mean_area.index, mean_area.values,
+         yerr=std_area.values,   # <-- this adds the error bars
+         capsize=5)              # small caps on the error bar ends
+
+  ax.set_title("Mean Nuclei Area +/- Std Dev")
+  ax.set_xlabel("Well")
+  ax.set_ylabel("Area (pixels squared)")
+  plt.tight_layout()
+  plt.savefig("barchart_with_errorbars.png", dpi=150)
+
+
+================================================================================
+  STEP 7 — VIOLIN PLOT
+================================================================================
+
+A violin plot shows the FULL DISTRIBUTION of values per group.
+Much more informative than just a mean!
+
+  import seaborn as sns
+
+  fig, ax = plt.subplots(figsize=(8, 5))
+
+  sns.violinplot(
+      data=nuc,                    # the DataFrame
+      x="Metadata_Well",           # which column defines the groups (x-axis)
+      y="AreaShape_Area",          # which column to measure (y-axis)
+      hue="Metadata_Well",         # colour each well differently
+      palette="muted",             # colour scheme
+      legend=False,
+      inner="box",                 # draw a tiny box plot inside the violin
+      ax=ax,
+  )
+
+  ax.set_title("Nuclei Area Distribution by Well")
+  ax.set_xlabel("Well")
+  ax.set_ylabel("Area (pixels squared)")
+  plt.tight_layout()
+  plt.savefig("violin_plot.png", dpi=150)
+
+
+  HOW TO READ A VIOLIN:
+  - The WIDTH at any height shows how many cells have that value.
+  - Wider = more cells with that measurement.
+  - The inner box shows the median (middle line) and the quartiles.
+
+
+================================================================================
+  STEP 8 — BOX PLOT
+================================================================================
+
+A box plot summarises the data with 5 numbers:
+minimum, Q1 (25%), median (50%), Q3 (75%), maximum.
+
+  fig, ax = plt.subplots(figsize=(8, 5))
+
+  sns.boxplot(
+      data=nuc,
+      x="Metadata_Well",
+      y="Intensity_MeanIntensity_OrigDNA",
+      hue="Metadata_Well",
+      palette="Set2",
+      legend=False,
+      ax=ax,
+  )
+
+  # Optional: overlay the raw data points on top
+  sns.stripplot(
+      data=nuc,
+      x="Metadata_Well",
+      y="Intensity_MeanIntensity_OrigDNA",
+      color="black",
+      alpha=0.3,    # 30% transparent
+      size=3,
+      ax=ax,
+  )
+
+  ax.set_title("DNA Mean Intensity per Well")
+  ax.set_xlabel("Well")
+  ax.set_ylabel("DNA Mean Intensity")
+  plt.tight_layout()
+  plt.savefig("box_plot.png", dpi=150)
+
+
+  HOW TO READ A BOX:
+  - The LINE in the middle = median (half the cells are above, half below).
+  - The BOX = the middle 50% of all cells.
+  - The WHISKERS = most of the remaining range.
+  - DOTS outside the whiskers = outliers (unusual values).
+
+
+================================================================================
+  STEP 9 — HISTOGRAM
+================================================================================
+
+A histogram shows how values are distributed. One bar = one "bucket" of values.
+Taller bar = more cells with that value.
+
+  fig, ax = plt.subplots(figsize=(8, 5))
+
+  # Plot one histogram per well, semi-transparent so they overlap nicely
+  for well in sorted(nuc["Metadata_Well"].unique()):
+      data_for_this_well = nuc[nuc["Metadata_Well"] == well]["AreaShape_Area"]
+      ax.hist(data_for_this_well,
+              bins=40,          # number of "buckets"
+              alpha=0.5,        # 50% transparent
+              label=well)
+
+  ax.set_title("Nuclei Area Distribution")
+  ax.set_xlabel("Area (pixels squared)")
+  ax.set_ylabel("Number of nuclei")
+  ax.legend(title="Well")
+  plt.tight_layout()
+  plt.savefig("histogram.png", dpi=150)
+
+
+  WHAT TO CHANGE:
+  - "AreaShape_Area"  ->  any numeric column you want to look at
+  - bins=40           ->  more bins = more detail, fewer bins = smoother
+
+
+================================================================================
+  STEP 10 — SCATTER PLOT
+================================================================================
+
+A scatter plot shows the RELATIONSHIP between two measurements.
+Each dot = one nucleus (or one cell).
+
+  fig, ax = plt.subplots(figsize=(8, 6))
+
+  sns.scatterplot(
+      data=nuc,
+      x="AreaShape_Area",                      # measurement on x-axis
+      y="Intensity_MeanIntensity_OrigDNA",     # measurement on y-axis
+      hue="Metadata_Well",                     # colour by well
+      alpha=0.5,                               # semi-transparent points
+      s=15,                                    # point size
+      ax=ax,
+  )
+
+  ax.set_title("Nuclei Area vs. DNA Intensity")
+  ax.set_xlabel("Area (pixels squared)")
+  ax.set_ylabel("DNA Mean Intensity")
+  ax.legend(title="Well", bbox_to_anchor=(1.02, 1), loc="upper left")
+  plt.tight_layout()
+  plt.savefig("scatter_plot.png", dpi=150, bbox_inches="tight")
+
+
+  TIP: If there are too many dots and the plot is slow or cluttered,
+       take a random sample first:
+       sample = nuc.sample(n=2000, random_state=42)
+       Then use "sample" instead of "nuc" in sns.scatterplot().
+
+
+================================================================================
+  STEP 11 — SAVING PLOTS
+================================================================================
+
+Use plt.savefig() BEFORE plt.show() (or instead of it in scripts):
+
+  plt.savefig("my_plot.png",  dpi=150)   # PNG image, 150 dots per inch
+  plt.savefig("my_plot.pdf")             # PDF (vector, best for papers)
+  plt.savefig("my_plot.svg")             # SVG (editable in Illustrator)
+  plt.close()                            # free memory (important in loops)
+
+  TIP: Always call plt.tight_layout() just before saving to stop
+       axis labels from being cropped.
+
+
+================================================================================
+  STEP 12 — CHANGING COLOURS AND STYLES
+================================================================================
+
+Change the overall look with one line at the TOP of your script:
+
+  import seaborn as sns
+  sns.set_theme(style="whitegrid")   # clean white background with grid
+
+  Other style options:
+    "darkgrid"   ->  dark background with grid lines
+    "white"      ->  plain white, no grid
+    "dark"       ->  dark background, no grid
+    "ticks"      ->  only axis tick marks
+
+  Colour palette options:
+    palette="muted"     # soft colours (good for many groups)
+    palette="tab10"     # 10 distinct colours
+    palette="pastel"    # very soft, light colours
+    palette="Set2"      # colourblind-friendly
+    palette="Blues"     # gradient of blue (light to dark)
+
+
+================================================================================
+  STEP 13 — CUSTOMISING TITLES AND LABELS
+================================================================================
+
+  ax.set_title("My Plot Title",  fontsize=16, fontweight="bold")
+  ax.set_xlabel("X axis label",  fontsize=13)
+  ax.set_ylabel("Y axis label",  fontsize=13)
+  ax.tick_params(labelsize=11)   # size of the tick mark numbers
+
+  # Rotate x-axis labels (useful when well names overlap):
+  ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+
+
+================================================================================
+  STEP 14 — QUICK REFERENCE: WHICH PLOT FOR WHAT?
+================================================================================
+
+  I want to show...                             Use...
+  ------------------------------------------------------------
+  One mean value per group                      Bar chart
+  Full shape of the distribution per group      Violin plot
+  Median + quartiles per group                  Box plot
+  How values are spread (one variable)          Histogram
+  Relationship between two measurements         Scatter plot
+
+
+================================================================================
+  STEP 15 — COMMON MISTAKES AND HOW TO FIX THEM
+================================================================================
+
+  Error: ModuleNotFoundError: No module named 'pandas'
+  Cause: Library not installed
+  Fix:   Run this in the terminal:  pip install pandas
+
+  ----
+
+  Error: FileNotFoundError
+  Cause: Python can't find the CSV file
+  Fix:   Check the file path is correct. Make sure the script is in
+         the same folder as the CSV, or write the full path.
+
+  ----
+
+  Error: KeyError: 'ColumnName'
+  Cause: The column name doesn't exist (or you made a typo)
+  Fix:   Print all column names:  print(nuc.columns.tolist())
+         Copy the exact name from the list.
+
+  ----
+
+  Problem: Plot is blank or not showing
+  Cause:   plt.show() was called before drawing anything
+  Fix:     Draw everything first, THEN call plt.show() or plt.savefig()
+
+  ----
+
+  Problem: Labels are cut off at the edge of the image
+  Cause:   Missing tight_layout()
+  Fix:     Add  plt.tight_layout()  just before plt.savefig()
+
+
+================================================================================
+  STEP 16 — YOUR WORKFLOW SUMMARY
+================================================================================
+
+  Every time you want to make a new plot, follow these steps:
+
+  1. Open make_plots.py in your editor (e.g. VS Code)
+
+  2. Find which column you want to plot:
+         print(nuc.columns.tolist())
+
+  3. Choose your plot type:
+         bar chart / violin / box / histogram / scatter
+
+  4. Copy the matching code block from this guide
+
+  5. Change the column name to the one you want to plot
+
+  6. Run the script:
+         python make_plots.py
+
+  7. Open the "plots" folder to see your image
+
+  8. Adjust colours, title, or axis labels as you like
+
+  9. Re-run and repeat!
+
+
+================================================================================
+  GOOD LUCK AND HAPPY PLOTTING!
+================================================================================
+
+  The script make_plots.py (in the same folder as this file) contains
+  working examples of every plot type above. Use it as your reference.
+
+  If something doesn't work:
+    - Read the error message carefully (it usually says what went wrong)
+    - Check Step 15 (common mistakes) in this guide
+    - Google the error message — Stack Overflow is your best friend!
+
+================================================================================
+
