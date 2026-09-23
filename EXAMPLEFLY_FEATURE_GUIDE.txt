@@ -1,0 +1,202 @@
+================================================================================
+  EXAMPLEFLY FEATURE REFERENCE GUIDE
+  Uitleg van alle NIEUWE features uit de output_examplefly dataset
+================================================================================
+
+In de ExampleFly dataset zitten verschillende meetmodules die nog NIET aanwezig
+waren in je eerste dataset (output_cellprofiler_exercise).
+
+De basisfeatures (zoals AreaShape_Area, Intensity_MeanIntensity, etc.) werken
+exact hetzelfde. Hieronder vind je de uitleg van alle NIEUWE feature-groepen:
+
+  1. Texture (Haralick textuurmetingen)
+  2. Neighbors (Buurcellen en cel-omgeving)
+  3. Classify (Automatische cel-sortering)
+  4. Math (Berekende ratio)
+  5. ImageQuality (Kwaliteitscontrole van foto's)
+  6. Crop (Afgesneden randen)
+
+
+================================================================================
+  1. FEATURE GROEP: Texture (Haralick Textuurmetingen)
+================================================================================
+
+  Waar gemeten: Cells.csv, Cytoplasm.csv, Nuclei.csv
+  Wat meet het: Niet hoeveel licht er is, maar het RUIMTELIJKE PATROON van het
+                licht (egaal, gevlekt, vezelig, of korrelig).
+
+  Uitleg van de bestandsnaam:
+    bv. Texture_Contrast_CropBlue_3_00_256
+      - 3   = gemeten over een afstand van 3 pixels
+      - 00  = oriëntatiehoek (0 graden = horizontaal)
+      - 256 = grijswaardenschaal (256 tinten)
+
+  VISUEEL:
+    EGAAL / HOMOGEEN                      KORRELIG / CONTRASTRIJK
+    (bv. Diffuus euchromatine)            (bv. Gecondenseerd heterochromatine)
+       ░░░░░░░░░░                              ▓░   ▓▓   ░▓
+       ░░░░░░░░░░                                ▓▓   ░░   ▓
+       ░░░░░░░░░░                              ░   ▓▓   ▓▓
+    -> Contrast = LAAG, ASM = HOOG         -> Contrast = HOOG, ASM = LAAG
+
+  DE BELANGRIJKSTE TEXTUUR-FEATURES:
+
+  Texture_Contrast
+    Hoe groot zijn de intensiteitssprongen tussen naburige pixels?
+    HOOG: Felle stipjes pal naast donkere achtergrond (gecondenseerd DNA, puncta).
+
+  Texture_AngularSecondMoment (ASM)                                                   dees
+    Maat voor homogeniteit en uniformiteit.
+    HOOG: Heel egaal, vlekkeloos signaal (geen korrels).
+
+  Texture_InverseDifferenceMoment (IDM)
+    Lijkt op ASM: meet lokale gelijkmatigheid.
+    HOOG: Weinig lokale variatie in helderheid.
+
+  Texture_Entropy
+    Maat voor wanorde, chaos en ruwheid van het patroon.
+    HOOG: Chaotisch, vlekkerig, onvoorspelbaar patroon.
+
+  Texture_Variance
+    Hoe sterk wijken pixelparen af van het gemiddelde?
+    Spreiding van de textuurcontrasten.
+
+  Texture_Correlation
+    Hoe sterk hangt de waarde van een pixel af van zijn buurpixel in die richting?
+    Toont patronen met een duidelijke lengterichting (bv. vezels of strepen).
+
+  Texture_InfoMeas1 & InfoMeas2
+    Informatie-theoretische maten voor patrooncomplexiteit.
+
+
+================================================================================
+  2. FEATURE GROEP: Neighbors (Buurcellen en Cel-omgeving)
+================================================================================
+
+  Waar gemeten: Nuclei.csv
+  Wat meet het: De 'sociale omgeving' van de cel op de bodem van de plaat.
+  De '_4' betekent: kernen binnen 4 pixels afstand worden als 'buur' geteld.
+
+  VISUEEL:
+             (Kern 2)
+                \  d1 (FirstClosestDistance)
+                 \
+      (Kern 3) -- ( KERN 1 ) === (Kern 4)  <-- raakt elkaar (PercentTouching > 0)
+                     |
+                     | d2 (SecondClosestDistance)
+                  (Kern 5)
+
+  Neighbors_NumberOfNeighbors_4
+    Aantal naburige kernen binnen 4 pixels afstand.
+    HOOG: Hoge celconfluentie of celdeling in nestjes / klonters.
+
+  Neighbors_PercentTouching_4
+    Welk percentage van de omtrek raakt direct een buurkern aan?
+    HOOG: Cellen zitten dicht op elkaar gepakt (epitheel/weefsel-achtig).
+
+  Neighbors_FirstClosestDistance_4
+    Afstand (in pixels) tot de allerdichtstbijzijnde buurkern.
+    KLEIN: Cellen liggen tegen elkaar; GROOT: Geïsoleerde cel.
+
+  Neighbors_SecondClosestDistance_4
+    Afstand tot de op één na dichtste buur.
+
+  Neighbors_AngleBetweenNeighbors_4
+    De hoek (in graden) tussen de twee dichtste buren.
+    Toont of buren netjes in een rij liggen (180°) of willekeurig verspreid.
+
+  Neighbors_FirstClosestObjectNumber_4
+    Het ID-nummer (ObjectNumber) van die dichtste buur.
+
+
+================================================================================
+  3. FEATURE GROEP: Classify (Automatische Cel-sortering)
+================================================================================
+
+  Waar gemeten: Nuclei.csv (per cel) en Image.csv (per foto)
+  Wat is het: In de pipeline heeft de onderzoeker een regel ingesteld:
+              'Verdeel de celkernen op basis van hun oppervlakte (Area) in
+               3 groepen: Small, Medium en Large.'
+
+  IN NUCLEI.CSV (binaire vlaggen per cel, 1 = ja, 0 = nee):
+    Classify_Small   : 1 als de cel klein is, anders 0
+    Classify_Medium  : 1 als de cel middelgroot is, anders 0
+    Classify_Large   : 1 als de cel groot is, anders 0
+
+  IN IMAGE.CSV (totalen per foto):
+    Classify_Large_NumObjectsPerBin : Absoluut aantal grote kernen in deze foto
+    Classify_Large_PctObjectsPerBin : Percentage grote kernen in deze foto
+    (Hetzelfde bestaat voor Small en Medium)
+
+  Biologisch nut:
+    Handig om direct staafdiagrammen te maken van het percentage grote vs.
+    kleine cellen (bv. hypertrofie, zwellende cellen door osmose, of apoptose).
+
+
+================================================================================
+  4. FEATURE GROEP: Math (Berekende Verhouding)
+================================================================================
+
+  Waar gemeten: Nuclei.csv
+  Wat is het: Een door de onderzoeker zelf ingestelde wiskundige formule
+              in de CalculateMath module.
+
+  Formule in deze specifieke pipeline:
+    Math_Ratio = Intensity_MeanIntensity_CropBlue (DAPI) / AreaShape_Area
+
+  Biologische betekenis:
+    Meet de signaaldichtheid per oppervlakte-eenheid.
+    - Hoge ratio: kleine, heel felle, dicht op elkaar gepakte kern.
+    - Lage ratio: grote, fletse, diffuse kern.
+
+
+================================================================================
+  5. FEATURE GROEP: ImageQuality (Kwaliteitscontrole / QC van Foto's)
+================================================================================
+
+  Waar gemeten: Image.csv (per foto, voor elk kanaal zoals OrigBlue, OrigGreen)
+  Wat is het: Technische kwaliteitscontrole om te bepalen of een foto onscherp,
+              overbelicht of vuil is.
+
+  VISUEEL FOCUS:
+    SCHERPE FOTO (FocusScore is HOOG)        ONSCHERPE FOTO (FocusScore is LAAG)
+       Harde, duidelijke randen                 Vage, zachte overgangen
+          |̅̅̅̅̅|                                    ╭─────╮
+       ___|     |___                             ___/       \___
+
+  ImageQuality_FocusScore_...
+    Hoe scherp is het beeld? Berekend via contrastovergangen op randen.
+    LAAG GETAL: Foto was out-of-focus -> weggooien uit je analyse!
+
+  ImageQuality_LocalFocusScore_...
+    Scherpstelling binnen deelgebieden van het beeld.
+    Detecteert scheve platen (bv. links scherp, rechts onscherp).
+
+  ImageQuality_PercentMaximal_...
+    Percentage pixels dat overbelicht/verzadigd is (maximale camera-waarde).
+    HOOG (>1-2%): Overbelicht; kwantitatieve intensiteit is onbetrouwbaar.
+
+  ImageQuality_PowerLogLogSlope_...
+    Meet de frequentieverdeling van het beeld (verhouding ruis vs signaal).
+    Detecteert vlekken, stofjes op de lens of cameraruistekort.
+
+  ImageQuality_TotalIntensity_...
+    Totale hoeveelheid licht in de hele foto (controle op lamp-uitval).
+
+
+================================================================================
+  6. FEATURE GROEP: Crop (Afgesneden Randen)
+================================================================================
+
+  Waar gemeten: Image.csv
+  Wat is het: De buitenste beeldranden vertonen vaak donkere hoeken
+              (vignettering) of aberraties. Daarom is de rand weggesneden.
+
+  Crop_OriginalImageArea_CropBlue
+    Aantal pixels van de originele ruwe foto.
+
+  Crop_AreaRetainedAfterCropping_CropBlue
+    Aantal pixels dat overblijft na het bijsnijden van de randen.
+
+================================================================================
+
