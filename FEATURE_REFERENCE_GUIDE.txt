@@ -1,0 +1,418 @@
+================================================================================
+  CELLPROFILER FEATURE REFERENCE GUIDE
+  Complete explanation of all features in your output data
+================================================================================
+
+Your CellProfiler output has 7 CSV files. Each file is a different level
+of data:
+
+  FILE                         LEVEL            WHAT IT CONTAINS
+  ------------------------------------------------------------------
+  MyExpt_Cells.csv             Per cell         Shape, intensity, coloc. of whole cells
+  MyExpt_Cytoplasm.csv         Per cell         Shape, intensity of the cytoplasm only
+  MyExpt_Nuclei.csv            Per nucleus      Shape, intensity, coloc., child objects
+  MyExpt_Nucleoli.csv          Per nucleolus    Shape, intensity of each nucleolus
+  MyExpt_NucleoliChildObjects  Per child obj    Child object measurements
+  MyExpt_Image.csv             Per image        Image-level counts and metadata
+  MyExpt_Experiment.csv        Per experiment   Pipeline settings (technical)
+
+
+================================================================================
+  YOUR 5 IMAGING CHANNELS (STAINS)
+================================================================================
+
+  Channel name                  What it stains             Biological meaning
+  ---------------------------------------------------------------------------
+  OrigDNA                       DNA (nucleus)              Cell cycle, DNA content
+  OrigRNA                       RNA                        Transcription activity
+  OrigER                        Endoplasmic Reticulum      Protein folding/processing
+  OrigMito                      Mitochondria               Energy production
+  OrigActin_Golgi_Membrane      Actin/Golgi/Membrane       Cell shape, trafficking
+
+  Many features below are measured SEPARATELY for each channel.
+  E.g. Intensity_MeanIntensity_OrigDNA, Intensity_MeanIntensity_OrigRNA, etc.
+
+
+================================================================================
+  FEATURE GROUP 1: AreaShape (Form and Size)
+================================================================================
+
+  Measured in: Cells, Cytoplasm, Nuclei, Nucleoli
+  What it measures: The shape, size, and geometry of each detected object
+
+  FEATURE                       RANGE      MEANING
+  ---------------------------------------------------------------------------
+
+  --- SIZE FEATURES ---
+
+  AreaShape_Area                0-inf      Number of pixels inside the object.
+                                           = the SIZE of the cell/nucleus.
+                                           Bigger = larger cell.
+
+  AreaShape_ConvexArea          0-inf      Area of the smallest convex shape
+                                           that completely encloses the object.
+                                           Like wrapping a rubber band around it.
+
+  AreaShape_EquivalentDiameter  0-inf      Diameter of a circle with the same
+                                           area. Quick size estimate.
+
+  AreaShape_Perimeter           0-inf      Length of the outer boundary (outline)                         dees
+                                           in pixels.
+
+  AreaShape_BoundingBoxArea     0-inf      Area of the smallest rectangle that                              dees
+                                           fits around the object.
+
+  AreaShape_BoundingBoxMin_X/Y  pixels     Top-left corner of the bounding box.
+  AreaShape_BoundingBoxMax_X/Y  pixels     Bottom-right corner of the bounding box.
+
+  --- SHAPE/ROUNDNESS FEATURES ---
+
+  AreaShape_FormFactor          0-1        How ROUND the object is.
+                                           Formula: 4*pi*Area / Perimeter^2
+                                           1.0 = perfect circle
+                                           <0.5 = very irregular/spiky
+
+  AreaShape_Eccentricity        0-1        How ELONGATED the object is.
+                                           0 = perfect circle
+                                           close to 1 = very stretched out
+                                           Changes with migration or cell stress.
+
+  AreaShape_Compactness         1-inf      How compact the shape is.
+                                           1.0 = perfect circle (most compact)
+                                           Higher = more irregular
+                                           Related to chromatin reorganization.
+
+  AreaShape_Solidity             0-1       Area / ConvexArea.                                               dees
+                                           1.0 = completely filled, no indentations
+                                           <1 = has holes, concavities, dents.
+
+  AreaShape_Extent               0-1       Area / BoundingBoxArea.
+                                           How much of the bounding box is filled.
+                                           Circle ~ 0.785, square = 1.0
+
+  AreaShape_EulerNumber          integer   Number of objects minus number of holes.
+                                           1 = no holes. 0 = one hole (e.g. donut).
+
+  --- AXIS FEATURES ---
+
+  AreaShape_MajorAxisLength     0-inf      Length of the LONG axis of the
+                                           best-fitting ellipse. How long the
+                                           object stretches.
+
+  AreaShape_MinorAxisLength     0-inf      Length of the SHORT axis of the
+                                           best-fitting ellipse. How wide it is.
+
+  AreaShape_MaxFeretDiameter    0-inf      Maximum distance between any two points
+                                           on the boundary. Like measuring with a
+                                           caliper at its widest.
+                                           Strongly correlated with MajorAxisLength.
+
+  AreaShape_MinFeretDiameter    0-inf      Minimum distance (caliper at its
+                                           narrowest). Strongly correlated with
+                                           MinorAxisLength.
+
+  AreaShape_Orientation         -90 to 90  Angle (degrees) of the major axis
+                                           relative to the horizontal.
+                                           0 = horizontal, 90 = vertical.
+
+  --- RADIUS FEATURES ---
+
+  AreaShape_MaximumRadius       0-inf      Largest distance from center to edge.
+  AreaShape_MeanRadius          0-inf      Average distance from center to edge.
+  AreaShape_MedianRadius        0-inf      Median distance from center to edge.
+
+  --- CENTER POSITION ---
+
+  AreaShape_Center_X            pixels     X coordinate of the object center.
+  AreaShape_Center_Y            pixels     Y coordinate of the object center.
+
+  --- ZERNIKE FEATURES (advanced) ---
+
+  AreaShape_Zernike_N_M         -1 to 1   Mathematical descriptors of shape
+                                           complexity. There are 30 of these
+                                           (N=0..9, M varies). They capture
+                                           detailed shape information but are
+                                           hard to interpret individually.
+                                           Often REDUNDANT with simpler shape
+                                           features and can be removed.
+
+
+================================================================================
+  FEATURE GROUP 2: Intensity (Brightness)
+================================================================================
+
+  Measured in: Cells, Cytoplasm, Nuclei, Nucleoli
+  What it measures: How bright the fluorescent signal is in each channel
+  Channels: OrigDNA, OrigRNA, OrigER, OrigMito, OrigActin_Golgi_Membrane
+
+  Each feature below exists for EACH channel, e.g.:
+    Intensity_MeanIntensity_OrigDNA
+    Intensity_MeanIntensity_OrigRNA
+    Intensity_MeanIntensity_OrigER
+    etc.
+
+  FEATURE                           MEANING
+  ---------------------------------------------------------------------------
+
+  --- CENTRAL TENDENCY (typical brightness) ---
+
+  Intensity_MeanIntensity           Average pixel brightness inside the object.
+                                    = how much of this stain is present on average.
+                                    MOST COMMONLY USED intensity feature.
+
+  Intensity_MedianIntensity         Middle value when all pixels are sorted.
+                                    Less sensitive to outliers than Mean.
+                                    Often redundant with MeanIntensity.
+
+  Intensity_IntegratedIntensity     Sum of ALL pixel values inside the object.
+                                    = Mean * Area. Captures total amount of stain.
+                                    Higher for big OR bright objects.
+
+  --- SPREAD (how variable is the brightness?) ---
+
+  Intensity_StdIntensity            Standard deviation of pixel intensities.
+                                    High = uneven staining (e.g. speckled pattern).
+                                    Low = uniform staining.
+
+  Intensity_MADIntensity            Median Absolute Deviation. Similar to Std but
+                                    more robust to outliers.
+
+  --- EXTREMES ---
+
+  Intensity_MaxIntensity            Brightest pixel in the object.
+  Intensity_MinIntensity            Dimmest pixel in the object.
+
+  --- QUARTILES ---
+
+  Intensity_LowerQuartileIntensity  25th percentile of pixel intensities.
+  Intensity_UpperQuartileIntensity  75th percentile of pixel intensities.
+                                    Together they show the brightness distribution.
+
+  --- EDGE MEASUREMENTS ---
+
+  Intensity_MeanIntensityEdge       Mean brightness of pixels ON THE BOUNDARY.
+  Intensity_MaxIntensityEdge        Brightest pixel on the boundary.
+  Intensity_MinIntensityEdge        Dimmest pixel on the boundary.
+  Intensity_StdIntensityEdge        Std dev on the boundary.
+  Intensity_IntegratedIntensityEdge Sum of pixel values on the boundary.
+
+                                    Edge intensities tell you about staining
+                                    at the PERIPHERY of the object.
+                                    E.g. membrane staining should be high at edges.
+
+  --- DISPLACEMENT ---
+
+  Intensity_MassDisplacement        Distance between the geometric center and
+                                    the intensity-weighted center (center of mass).
+                                    High = stain is concentrated on one side.
+                                    Low = stain is evenly spread.
+                                    Useful for detecting TRANSLOCATION
+                                    (protein moving from one part to another).
+
+
+================================================================================
+  FEATURE GROUP 3: Correlation / Colocalization
+================================================================================
+
+  Measured in: Cells, Cytoplasm, Nuclei
+  What it measures: Do two channels overlap in the same pixels?
+  Each metric is measured for ALL channel pairs (10 pairs for 5 channels)
+
+  Example column name:
+    Correlation_Correlation_OrigDNA_OrigRNA
+    = Pearson correlation between DNA and RNA channels
+
+  METRIC                            RANGE     MEANING
+  ---------------------------------------------------------------------------
+
+  Correlation_Correlation           -1 to 1   Pearson correlation coefficient.
+                                              1 = perfectly overlap (same location)
+                                              0 = no relationship
+                                              -1 = perfectly anti-correlated
+                                              MOST COMMONLY USED colocalization metric.
+
+  Correlation_Overlap               0 to 1    Overlap coefficient (Manders-like).                   dees
+                                              1 = complete overlap
+                                              Not affected by differences in brightness.
+
+  Correlation_K (Costes K)          0 to inf  Costes colocalization coefficient.
+                                              K for channel A given channel B.
+                                              >1 = more overlap than expected by chance.          dees
+                                              NOTE: K_A_B is different from K_B_A
+
+  Correlation_Manders               0 to 1    Manders coefficient.                                  dees
+                                              Fraction of channel A signal that overlaps
+                                              with channel B.
+                                              Manders_A_B = "how much A is in B"
+                                              Manders_B_A = "how much B is in A"
+                                              They are NOT symmetric.
+
+  Correlation_RWC                   0 to 1    Rank Weighted Colocalization.                         dees
+                                              Similar to Manders but uses ranks
+                                              instead of raw intensities.
+                                              More robust to noise.
+
+  BIOLOGICAL INTERPRETATION:
+    DNA-RNA correlation high   = active transcription
+    ER-Mito correlation high   = ER-mitochondria contact sites (MAMs)
+    Mito-RNA correlation high  = local translation at mitochondria
+    DNA-Mito correlation high  = unusual, could indicate mitochondrial stress
+
+
+================================================================================
+  FEATURE GROUP 4: Location
+================================================================================
+
+  Measured in: Cells, Cytoplasm, Nuclei, Nucleoli
+  What it measures: WHERE the object is in the image
+
+  FEATURE                              MEANING
+  ---------------------------------------------------------------------------
+
+  Location_Center_X                    X coordinate of object center (pixels)
+  Location_Center_Y                    Y coordinate of object center (pixels)
+  Location_Center_Z                    Z coordinate (always 0 for 2D images)
+
+  Location_CenterMassIntensity_X       X of the intensity-weighted center for             dees
+  Location_CenterMassIntensity_Y       each channel. If different from Center_X/Y,
+                                       it means staining is uneven.
+
+  Location_MaxIntensity_X              Location of the BRIGHTEST pixel in each
+  Location_MaxIntensity_Y              channel. Where is the peak signal?
+
+  BIOLOGICAL USE:
+    Usually NOT biologically informative on their own (depends on where
+    the cell happened to be in the image). Mostly used for technical QC
+    or to calculate distances between objects.
+
+
+================================================================================
+  FEATURE GROUP 5: Children / Parents / Relationships
+================================================================================
+
+  Measured in: Nuclei, Cells
+  What it measures: How objects relate to each other
+
+  FEATURE                              MEANING
+  ---------------------------------------------------------------------------
+
+  Children_Nucleoli_Count              How many nucleoli are INSIDE this nucleus.
+                                       More nucleoli = more ribosome production
+                                       = more active cell.
+
+  Children_Cells_Count                 How many cells belong to this nucleus.
+                                       Usually 1. If 0 = nucleus without cell body.
+
+  Children_Cytoplasm_Count             How many cytoplasm objects per cell.
+                                       Should always be 1.
+
+  Parent_Nuclei                        Which nucleus (ObjectNumber) is the
+                                       "parent" of this cell/cytoplasm.
+
+  Parent_Cells                         Which cell this cytoplasm belongs to.
+
+
+================================================================================
+  FEATURE GROUP 6: Mean_Nucleoli (Nuclei table only)
+================================================================================
+
+  Measured in: Nuclei only
+  What it measures: Average properties of nucleoli INSIDE each nucleus
+
+  FEATURE                              MEANING
+  ---------------------------------------------------------------------------
+
+  Mean_Nucleoli_AreaShape_Area         Average SIZE of nucleoli in this nucleus.
+  Mean_Nucleoli_AreaShape_Eccentricity Average SHAPE of nucleoli.
+  Mean_Nucleoli_Intensity_MeanIntensity_OrigDNA
+                                       Average DNA intensity of nucleoli.
+  Mean_Nucleoli_Distance_Centroid_Nuclei
+                                       Average distance of nucleoli from the
+                                       center of the nucleus.
+  ... (same features as AreaShape and Intensity, but averaged over all
+       nucleoli belonging to this nucleus)
+
+  BIOLOGICAL USE:
+    Large, numerous nucleoli = active ribosome biogenesis (proliferating cell)
+    Nucleoli clustered at center vs periphery = chromatin organization
+
+
+================================================================================
+  FEATURE GROUP 7: Image-level features (MyExpt_Image.csv)
+================================================================================
+
+  One row per image (site). Contains metadata and counts.
+
+  FEATURE                              MEANING
+  ---------------------------------------------------------------------------
+
+  --- METADATA ---
+
+  ImageNumber                          Unique ID for each image (1, 2, 3...)
+  Metadata_Plate                       Plate name (e.g. "plate1")
+  Metadata_Well                        Well position (e.g. "A14", "B13")
+  Metadata_Site                        Site/field within the well (1 or 2)
+  FileName_OrigDNA                     Original image filename for DNA channel
+
+  --- COUNTS ---
+
+  Count_Cells                          Number of cells detected in this image
+  Count_Nuclei                         Number of nuclei detected
+  Count_Nucleoli                       Number of nucleoli detected
+  Count_Cytoplasm                      Number of cytoplasm objects
+  Count_NucleoliChildObjects           Number of nucleoli child objects
+
+  --- QUALITY CONTROL ---
+
+  ImageQuality_... columns             Various image quality metrics
+                                       (focus, saturation, blur etc.)
+                                       Useful for filtering out bad images.
+
+  --- TECHNICAL ---
+
+  ExecutionTime_...                    How long each module took to run.
+  ModuleError_...                      Whether a module had errors (0 = OK).
+  Group_Number, Group_Index            Internal grouping info.
+
+
+================================================================================
+  WHICH FEATURES TO KEEP VS REMOVE?
+================================================================================
+
+  KEEP (biologically meaningful):
+
+    AreaShape_Area                     Object size
+    AreaShape_Eccentricity             Elongation
+    AreaShape_FormFactor               Roundness
+    AreaShape_Solidity                 Filled-ness
+    Intensity_MeanIntensity_*          Stain amount per channel
+    Intensity_StdIntensity_*           Staining heterogeneity
+    Intensity_IntegratedIntensity_*    Total stain amount
+    Intensity_MassDisplacement_*       Asymmetry of staining
+    Correlation_Correlation_*          Channel colocalization
+    Children_Nucleoli_Count            Nucleolar activity
+
+  CONSIDER REMOVING (often redundant):
+
+    AreaShape_ConvexArea               Redundant with Area
+    AreaShape_EquivalentDiameter       Redundant with Area
+    AreaShape_MaxFeretDiameter         Redundant with MajorAxisLength
+    AreaShape_MinFeretDiameter         Redundant with MinorAxisLength
+    AreaShape_Zernike_*                Hard to interpret, often redundant
+    AreaShape_BoundingBox*             Technical, not biological
+    Intensity_MedianIntensity          Redundant with MeanIntensity
+    Intensity_*Edge_*                  Redundant unless studying membranes
+    Location_*                         Position-dependent, not biological
+    Correlation_K_*                    Often redundant with Correlation
+    Correlation_RWC_*                  Often redundant with Manders
+
+  ALWAYS REMOVE (technical/not useful):
+
+    ImageNumber, ObjectNumber          IDs, not measurements
+    Number_Object_Number               Same as ObjectNumber
+    Parent_*                           Relationship links, not measurements
+    ExecutionTime_*                    Pipeline timing info
+    ModuleError_*                      Error flags
+
+================================================================================
+
